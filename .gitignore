@@ -1,0 +1,7 @@
+/coverage/
+/node_modules/
+/vendor/
+*.log
+composer.lock
+package-lock.json
+yarn.lock
