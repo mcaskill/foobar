@@ -76,19 +76,17 @@ jobs:
 
           echo "::set-output name=branch::${GITHUB_REF#refs/heads/}"
           echo "::set-output name=coverage::$COVERAGE"
-          echo "::set-output name=update::1"
     outputs:
       # Assign default values to ensure `needs` context
       # is defined in dependdent job.
       branch: ${{ steps.report.outputs.branch || null }}
-      coverage: ${{ steps.report.outputs.coverage || null }}
-      update: ${{ steps.report.outputs.update || false }}
+      coverage: ${{ steps.report.outputs.coverage || 'NaN' }}
 
   badge:
     name: Update coverage badge
     runs-on: ubuntu-latest
     needs: test
-    if: ${{ always() && (github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && needs.test.outputs.update)) }}
+    if: ${{ success() && needs.test.outputs.branch && needs.test.outputs.coverage >= 0 && (github.event_name == 'workflow_dispatch' || github.event_name == 'push') }}
     defaults:
       run:
         shell: bash
@@ -102,17 +100,24 @@ jobs:
         id: badge
         run: |
           TOTAL=$(printf "%1.f" ${{ needs.test.outputs.coverage }})
+          COLOR=lightgrey
 
-          if [ $TOTAL -eq 100 ]; then
-            COLOR=brightgreen
-          elif [ $TOTAL -gt 75 ]; then
-            COLOR=green
-          elif [ $TOTAL -gt 50 ]; then
-            COLOR=yellow
-          elif [ $TOTAL -gt 25 ]; then
-            COLOR=orange
+          if ! (( $TOTAL >= 0 )) 2> /dev/null; then
+            TOTAL=unavailable
           else
-            COLOR=red
+            (( $TOTAL > 100 )) && TOTAL=100
+
+            if (( $TOTAL == 100 )); then
+              COLOR=brightgreen
+            elif (( $TOTAL > 75 )); then
+              COLOR=green
+            elif (( $TOTAL > 50 )); then
+              COLOR=yellow
+            elif (( $TOTAL > 25 )); then
+              COLOR=orange
+            elif (( $TOTAL >= 0 )); then
+              COLOR=red
+            fi
           fi
 
           echo "::set-output name=message::$TOTAL"
