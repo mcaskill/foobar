@@ -43,19 +43,21 @@ jobs:
       run:
         shell: bash
     steps:
-      - uses: actions/checkout@v2
+      - name: Checkout repository
+        uses: actions/checkout@v2
 
-      - uses: actions/setup-node@v1
+      - name: Set up Node
+        uses: actions/setup-node@v1
         with:
           node-version: ${{ matrix.nodejs }}
 
-      - name: install
+      - name: Install dependencies
         run: npm install --no-fund
 
-      - name: test with coverage
+      - name: Test with coverage
         run: npm run test:coverage
 
-      - name: coverage report
+      - name: Report coverage
         id: report
         if: ${{ matrix.nodejs >= 16 && matrix.os == 'ubuntu-latest' }}
         # Notes:
@@ -91,12 +93,12 @@ jobs:
       run:
         shell: bash
     steps:
-      - name: checkout of storage branch
+      - name: Checkout storage branch
         uses: actions/checkout@v2
         with:
           ref: gh-storage
 
-      - name: prepare badge
+      - name: Prepare badge
         id: badge
         run: |
           TOTAL=$(printf "%1.f" ${{ needs.test.outputs.coverage }})
@@ -117,19 +119,19 @@ jobs:
           echo "::set-output name=color::$COLOR"
           echo "::set-output name=path::${{ needs.test.outputs.branch }}/coverage-badge.svg"
 
-      - name: prepare storage directory
+      - name: Prepare storage directory
         env:
           BADGE_PATH: ${{ steps.badge.outputs.path }}
         run: mkdir -p "${BADGE_PATH%/*}"
 
-      - name: update badge
+      - name: Fetch badge
         env:
           BADGE_MESSAGE: ${{ steps.badge.outputs.message }}
           BADGE_COLOR: ${{ steps.badge.outputs.color }}
           BADGE_PATH: ${{ steps.badge.outputs.path }}
         run: curl -fsS "https://img.shields.io/badge/coverage-${BADGE_MESSAGE}%25-${BADGE_COLOR}" -o ${BADGE_PATH}
 
-      - name: commit badge
+      - name: Commit badge
         env:
           BADGE_PATH: ${{ steps.coverage.outputs.path }}
         run: |
