@@ -1,0 +1,12 @@
+{
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "uvu tests",
+    "test:coverage": "c8 --include=src npm test"
+  },
+  "devDependencies": {
+    "c8": "^7.7.2",
+    "uvu": "^0.5.1"
+  }
+}
