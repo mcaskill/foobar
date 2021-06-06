@@ -1,0 +1,140 @@
+name: CI
+
+on:
+  # Triggers the workflow on push or pull request events but only for the
+  # "coverage-badge-action" branch and when at least one path matches a pattern
+  # in the `paths` filter.
+  push:
+    branches:
+      - coverage-badge-action
+    paths:
+      - .github/**
+      - src/**
+      - tests/**
+      - package.json
+  pull_request:
+    branches:
+      - coverage-badge-action
+    paths:
+      - .github/**
+      - src/**
+      - tests/**
+      - package.json
+
+  # Allows one to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: Node.js v${{ matrix.nodejs }} (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 3
+    strategy:
+      matrix:
+        nodejs:
+          # - 12
+          - 14
+          - 16
+        os:
+          - ubuntu-latest
+          # - windows-latest
+          # - macOS-latest
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v2
+
+      - uses: actions/setup-node@v1
+        with:
+          node-version: ${{ matrix.nodejs }}
+
+      - name: install
+        run: npm install --no-fund
+
+      - name: test with coverage
+        run: npm run test:coverage
+
+      - name: coverage report
+        id: report
+        if: ${{ matrix.nodejs >= 16 && matrix.os == 'ubuntu-latest' }}
+        # Notes:
+        # 1. Using `c8 check-coverage` for a more succinct output to extract total
+        #    percentages compared to a reporter, like "json-summary".
+        # 2. Using a coverage threshold of "101" to ensure c8 returns all four
+        #    metrics to calculate the total average.
+        run: |
+          COVERAGE=$( \
+            npx c8 check-coverage --lines 101 --functions 101 --branches 101 --statements 101 2> >( \
+             grep '(?<=lines |functions |branches |statements )\((\d*\.?\d+)%\)' -Po | \
+             grep '\d*\.?\d+' -Po | \
+             awk '{ SUM += $1 } END { print SUM / 4 }' \
+            ) || true \
+          )
+
+          echo "::set-output name=branch::${GITHUB_REF#refs/heads/}"
+          echo "::set-output name=coverage::$COVERAGE"
+          echo "::set-output name=update::1"
+    outputs:
+      # Assign default values to ensure `needs` context
+      # is defined in dependdent job.
+      branch: ${{ steps.report.outputs.branch || null }}
+      coverage: ${{ steps.report.outputs.total || null }}
+      update: ${{ steps.report.outputs.update || false }}
+
+  badge:
+    name: Update coverage badge
+    runs-on: ubuntu-latest
+    needs: test
+    if: ${{ always() && (github.event_name == "workflow_dispatch" || (github.event_name == "push" && needs.test.outputs.update)) }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: checkout of storage branch
+        uses: actions/checkout@v2
+        with:
+          ref: gh-storage
+
+      - name: prepare badge
+        id: badge
+        run: |
+          TOTAL=$(printf "%1.f" ${{ needs.test.outputs.coverage }})
+
+          if [ $TOTAL -eq 100 ]; then
+            COLOR=brightgreen
+          elif [ $TOTAL -gt 75 ]; then
+            COLOR=green
+          elif [ $TOTAL -gt 50 ]; then
+            COLOR=yellow
+          elif [ $TOTAL -gt 25 ]; then
+            COLOR=orange
+          else
+            COLOR=red
+          fi
+
+          echo "::set-output name=message::$TOTAL"
+          echo "::set-output name=color::$COLOR"
+          echo "::set-output name=path::${{ needs.test.outputs.branch }}/coverage-badge.svg"
+
+      - name: prepare storage directory
+        env:
+          BADGE_PATH: ${{ steps.badge.outputs.path }}
+        run: mkdir -p "${BADGE_PATH%/*}"
+
+      - name: update badge
+        env:
+          BADGE_MESSAGE: ${{ steps.badge.outputs.message }}
+          BADGE_COLOR: ${{ steps.badge.outputs.color }}
+          BADGE_PATH: ${{ steps.badge.outputs.path }}
+        run: curl -fsS "https://img.shields.io/badge/coverage-${BADGE_MESSAGE}%25-${BADGE_COLOR}" -o ${BADGE_PATH}
+
+      - name: commit badge
+        env:
+          BADGE_PATH: ${{ steps.coverage.outputs.path }}
+        run: |
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          git add "${BADGE_PATH}"
+          git commit -m "Update coverage badge"
+          git push
