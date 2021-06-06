@@ -78,7 +78,12 @@ jobs:
             awk '{ SUM += $1 } END { print ((SUM + ((4 - NR) * 100)) / 4) }'
           )
 
-          echo "::set-output name=branch::${GITHUB_REF#refs/heads/}"
+          BRANCH=${GITHUB_REF#refs/heads/}
+
+          echo "Branch: $BRANCH"
+          echo "Coverage: $COVERAGE"
+
+          echo "::set-output name=branch::$BRANCH"
           echo "::set-output name=coverage::$COVERAGE"
     outputs:
       # Assign default values to ensure `needs` context
