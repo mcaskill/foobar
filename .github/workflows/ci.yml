@@ -79,7 +79,7 @@ jobs:
       # Assign default values to ensure `needs` context
       # is defined in dependdent job.
       branch: ${{ steps.report.outputs.branch || null }}
-      coverage: ${{ steps.report.outputs.total || null }}
+      coverage: ${{ steps.report.outputs.coverage || null }}
       update: ${{ steps.report.outputs.update || false }}
 
   badge:
