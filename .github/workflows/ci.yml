@@ -61,17 +61,21 @@ jobs:
         id: report
         if: ${{ matrix.nodejs >= 16 && matrix.os == 'ubuntu-latest' }}
         # Notes:
-        # 1. Using `c8 check-coverage` for a more succinct output to extract total
-        #    percentages compared to a reporter, like "json-summary".
-        # 2. Using a coverage threshold of "101" to ensure c8 returns all four
+        # 1. Using `c8 check-coverage` for a more succinct output, to extract the
+        #    total of each metric, compared to reporters like "json-summary".
+        # 2. Using a coverage threshold of "101" to ensure `c8` returns all four
         #    metrics to calculate the total average.
+        # 3. In case `c8` does not return all four metrics, the script will
+        #    assume they are missing because they exceed the threshold somehow,
+        #    and have `awk` compensate by adding in the missing counts as 100%.
         run: |
+          REPORT=$(npx c8 check-coverage --lines 101 --functions 101 --branches 101 --statements 101 2>&1 > /dev/null)
+
           COVERAGE=$( \
-            npx c8 check-coverage --lines 101 --functions 101 --branches 101 --statements 101 2> >( \
-             grep '(?<=lines |functions |branches |statements )\((\d*\.?\d+)%\)' -Po | \
-             grep '\d*\.?\d+' -Po | \
-             awk '{ SUM += $1 } END { print SUM / 4 }' \
-            ) || true \
+            echo $REPORT | \
+            grep '(?<=lines |functions |branches |statements )\((\d*\.?\d+)%\)' -Po | \
+            grep '\d*\.?\d+' -Po | \
+            awk '{ SUM += $1 } END { print ((SUM + ((4 - NR) * 100)) / 4) }'
           )
 
           echo "::set-output name=branch::${GITHUB_REF#refs/heads/}"
