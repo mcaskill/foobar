@@ -148,7 +148,7 @@ jobs:
           BADGE_COLOR: ${{ steps.parameters.outputs.color }}
           BADGE_PATH: ${{ steps.parameters.outputs.path }}
         run: |
-          if [[ -f $BADGE_PATH ]]; then
+          if [[ -f "$BADGE_PATH" ]]; then
             BADGE_EXISTS=1
             BADGE_A=$(date -r $BADGE_PATH "+%s")
           else
@@ -158,7 +158,7 @@ jobs:
 
           curl -fsS "https://img.shields.io/badge/coverage-${BADGE_MESSAGE}%25-${BADGE_COLOR}" -o ${BADGE_PATH}
 
-          if [[ BADGE_EXISTS || -f $BADGE_PATH ]]; then
+          if [[ BADGE_EXISTS || -f "$BADGE_PATH" ]]; then
             BADGE_B=$(date -r $BADGE_PATH "+%s")
           else
             exit 1
@@ -172,7 +172,7 @@ jobs:
         env:
           BADGE_PATH: ${{ steps.parameters.outputs.path }}
         run: |
-          [[ ! -f $BADGE_PATH ]] && exit 1
+          [[ ! -f "$BADGE_PATH" ]] && exit 1
 
           git config user.name github-actions
           git config user.email github-actions@github.com
