@@ -75,13 +75,13 @@ jobs:
             echo $REPORT | \
             grep '(?<=lines |functions |branches |statements )\((\d*\.?\d+)%\)' -Po | \
             grep '\d*\.?\d+' -Po | \
-            awk '{ SUM += $1 } END { print ((SUM + ((4 - NR) * 100)) / 4) }'
+            awk '{ SUM += $1 } END { print int((SUM + ((4 - NR) * 100)) / 4) }'
           )
 
           BRANCH=${GITHUB_REF#refs/heads/}
 
-          echo "Branch: $BRANCH"
-          echo "Coverage: $COVERAGE"
+          echo "Target Branch: $BRANCH"
+          echo "Total Coverage: $COVERAGE%"
 
           echo "::set-output name=branch::$BRANCH"
           echo "::set-output name=coverage::$COVERAGE"
@@ -109,7 +109,7 @@ jobs:
       - name: Prepare badge
         id: parameters
         run: |
-          TOTAL=$(printf "%1.f" ${{ needs.test.outputs.coverage }})
+          TOTAL=${{ needs.test.outputs.coverage }}
           COLOR=lightgrey
 
           if ! (( $TOTAL >= 0 )) 2> /dev/null; then
