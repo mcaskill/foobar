@@ -85,6 +85,7 @@ jobs:
   badge:
     name: Update coverage badge
     runs-on: ubuntu-latest
+    continue-on-error: true
     needs: test
     if: ${{ success() && needs.test.outputs.branch && needs.test.outputs.coverage >= 0 && (github.event_name == 'workflow_dispatch' || github.event_name == 'push') }}
     defaults:
@@ -97,7 +98,7 @@ jobs:
           ref: gh-storage
 
       - name: Prepare badge
-        id: badge
+        id: parameters
         run: |
           TOTAL=$(printf "%1.f" ${{ needs.test.outputs.coverage }})
           COLOR=lightgrey
@@ -125,23 +126,47 @@ jobs:
           echo "::set-output name=path::${{ needs.test.outputs.branch }}/coverage-badge.svg"
 
       - name: Prepare storage directory
+        if: ${{ success() && steps.parameters.outputs.path }}
         env:
-          BADGE_PATH: ${{ steps.badge.outputs.path }}
+          BADGE_PATH: ${{ steps.parameters.outputs.path }}
         run: mkdir -p "${BADGE_PATH%/*}"
 
       - name: Fetch badge
+        id: badge
+        if: ${{ success() && steps.parameters.outputs.path }}
         env:
-          BADGE_MESSAGE: ${{ steps.badge.outputs.message }}
-          BADGE_COLOR: ${{ steps.badge.outputs.color }}
-          BADGE_PATH: ${{ steps.badge.outputs.path }}
-        run: curl -fsS "https://img.shields.io/badge/coverage-${BADGE_MESSAGE}%25-${BADGE_COLOR}" -o ${BADGE_PATH}
+          BADGE_MESSAGE: ${{ steps.parameters.outputs.message }}
+          BADGE_COLOR: ${{ steps.parameters.outputs.color }}
+          BADGE_PATH: ${{ steps.parameters.outputs.path }}
+        run: |
+          if [[ -f $BADGE_PATH ]]; then
+            BADGE_EXISTS=1
+            BADGE_A=$(date -r $BADGE_PATH "+%s")
+          else
+            BADGE_EXISTS=0
+            BADGE_A=0
+          fi
+
+          curl -fsS "https://img.shields.io/badge/coverage-${BADGE_MESSAGE}%25-${BADGE_COLOR}" -o ${BADGE_PATH}
+
+          if [[ BADGE_EXISTS || -f $BADGE_PATH ]]; then
+            BADGE_B=$(date -r $BADGE_PATH "+%s")
+          else
+            exit 1
+          fi
+
+          echo "::set-output name=updated::$((( $BADGE_B > $BADGE_A )))"
 
       - name: Commit badge
+        id: commit
+        if: ${{ success() && steps.badge.outputs.updated && steps.parameters.outputs.path }}
         env:
-          BADGE_PATH: ${{ steps.coverage.outputs.path }}
+          BADGE_PATH: ${{ steps.parameters.outputs.path }}
         run: |
+          [[ ! -f $BADGE_PATH ]] && exit 1
+
           git config user.name github-actions
           git config user.email github-actions@github.com
-          git add "${BADGE_PATH}"
+          git add $BADGE_PATH
           git commit -m "Update coverage badge"
           git push
