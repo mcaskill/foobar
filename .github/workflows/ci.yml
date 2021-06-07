@@ -60,6 +60,7 @@ jobs:
       - name: Report coverage
         id: report
         if: ${{ matrix.nodejs >= 16 && matrix.os == 'ubuntu-latest' }}
+        continue-on-error: true
         # Notes:
         # 1. Using `c8 check-coverage` for a more succinct output, to extract the
         #    total of each metric, compared to reporters like "json-summary".
@@ -75,13 +76,23 @@ jobs:
             echo $REPORT | \
             grep '(?<=lines |functions |branches |statements )\((\d*\.?\d+)%\)' -Po | \
             grep '\d*\.?\d+' -Po | \
-            awk '{ SUM += $1 } END { print int((SUM + ((4 - NR) * 100)) / 4) }'
+            awk '{ SUM += $1 } END { print (NR > 0) ? int((SUM + ((4 - NR) * 100)) / 4) : "NaN" }'
           )
+
+          if ! (( $COVERAGE >= 0 )) 2> /dev/null; then
+            echo "Coverage is not a positive number: $COVERAGE"
+            exit 1
+          fi
 
           BRANCH=${GITHUB_REF#refs/heads/}
 
-          echo "Target Branch: $BRANCH"
+          echo "Covered Branch: $BRANCH"
           echo "Total Coverage: $COVERAGE%"
+
+          if (( $COVERAGE > 100 )); then
+            COVERAGE=100
+            echo "↳ Corrected to 100%"
+          fi
 
           echo "::set-output name=branch::$BRANCH"
           echo "::set-output name=coverage::$COVERAGE"
@@ -112,22 +123,16 @@ jobs:
           TOTAL=${{ needs.test.outputs.coverage }}
           COLOR=lightgrey
 
-          if ! (( $TOTAL >= 0 )) 2> /dev/null; then
-            TOTAL=unavailable
-          else
-            (( $TOTAL > 100 )) && TOTAL=100
-
-            if (( $TOTAL == 100 )); then
-              COLOR=brightgreen
-            elif (( $TOTAL > 75 )); then
-              COLOR=green
-            elif (( $TOTAL > 50 )); then
-              COLOR=yellow
-            elif (( $TOTAL > 25 )); then
-              COLOR=orange
-            elif (( $TOTAL >= 0 )); then
-              COLOR=red
-            fi
+          if (( $TOTAL == 100 )); then
+            COLOR=brightgreen
+          elif (( $TOTAL > 75 )); then
+            COLOR=green
+          elif (( $TOTAL > 50 )); then
+            COLOR=yellow
+          elif (( $TOTAL > 25 )); then
+            COLOR=orange
+          elif (( $TOTAL >= 0 )); then
+            COLOR=red
           fi
 
           echo "::set-output name=message::$TOTAL"
@@ -161,10 +166,11 @@ jobs:
         id: commit
         if: ${{ success() && steps.badge.outputs.updated && steps.parameters.outputs.path }}
         env:
+          COVERAGE_PCT: ${{ steps.parameters.outputs.message }}%
           BADGE_PATH: ${{ steps.parameters.outputs.path }}
         run: |
           git config user.name github-actions
           git config user.email github-actions@github.com
           git add $BADGE_PATH
-          git commit -m "Update coverage badge"
+          git commit -m "Update coverage badge to $COVERAGE_PCT"
           git push
