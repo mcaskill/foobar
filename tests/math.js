@@ -12,6 +12,14 @@ sum('should compute values', () => {
   assert.is(math.sum(1, 2), 3);
   assert.is(math.sum(-1, -2), -3);
   assert.is(math.sum(-1, 1), 0);
+  assert.throws(
+    () => math.sum(true, 1),
+    (err) => err instanceof TypeError
+  );
+  assert.throws(
+    () => math.sum(1, true),
+    (err) => err instanceof TypeError
+  );
 });
 
 sum.run();
