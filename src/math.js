@@ -19,6 +19,10 @@ export const div = (a, b) => {
     throw new TypeError('Second parameter must be a number');
   }
 
+  if (b === 0) {
+    throw new TypeError('Can not divide by zero');
+  }
+
   return a / b;
 };
 
