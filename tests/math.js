@@ -36,6 +36,7 @@ div('should compute values', () => {
   assert.is(math.div(1, 2), 0.5);
   assert.is(math.div(-1, -2), 0.5);
   assert.is(math.div(-1, 1), -1);
+  assert.is(math.div(-1, 0), 0);
   assert.throws(
     () => math.div(true, 1),
     (err) => err instanceof TypeError
