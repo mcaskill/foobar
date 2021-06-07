@@ -148,30 +148,14 @@ jobs:
           BADGE_COLOR: ${{ steps.parameters.outputs.color }}
           BADGE_PATH: ${{ steps.parameters.outputs.path }}
         run: |
-          if [[ -f "$BADGE_PATH" ]]; then
-            BADGE_EXISTS=1
-            BADGE_A=$(date -r $BADGE_PATH "+%s")
-          else
-            BADGE_EXISTS=0
-            BADGE_A=0
-          fi
-
           curl -fsS "https://img.shields.io/badge/coverage-${BADGE_MESSAGE}%25-${BADGE_COLOR}" -o ${BADGE_PATH}
 
-          if [[ BADGE_EXISTS || -f "$BADGE_PATH" ]]; then
-            BADGE_B=$(date -r $BADGE_PATH "+%s")
-          else
-            echo "Could not create or update badge"
-            exit 1
-          fi
-
-          if git diff --no-ext-diff --quiet; then
+          if [[ -z "$(GIT_OPTIONAL_LOCKS=0 git status --porcelain --ignore-submodules -unormal)" ]]; then
+            echo "Nothing to commit"
             exit 0
           fi
 
-          BADGE_UPDATED=$((( $BADGE_B > $BADGE_A )))
-
-          echo "::set-output name=updated::$((( $BADGE_B > $BADGE_A )))"
+          echo "::set-output name=updated::1"
 
       - name: Commit badge
         id: commit
