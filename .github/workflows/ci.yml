@@ -43,7 +43,7 @@ jobs:
       run:
         shell: bash
     steps:
-      - name: Checkout repository
+      - name: Check out repository
         uses: actions/checkout@v2
 
       - name: Set up Node
@@ -101,7 +101,7 @@ jobs:
       run:
         shell: bash
     steps:
-      - name: Checkout storage branch
+      - name: Check out storage branch
         uses: actions/checkout@v2
         with:
           ref: gh-storage
