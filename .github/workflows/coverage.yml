@@ -26,6 +26,7 @@ on:
 
 jobs:
   coverage:
+    name: Check coverage
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -46,8 +47,6 @@ jobs:
             ${{ runner.os }}-node-
 
       - run: npm ci
-        if: ${{ steps.cache.outputs.cache-hit != 'true' }}
-      - run: npm run build
 
       - name: Report coverage
         id: report
