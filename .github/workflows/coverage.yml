@@ -62,7 +62,7 @@ jobs:
         # 4. If by some freak occurrence, the total percentage is above 100%,
         #    clamp it down to 100%.
         run: |
-          npm run test:coverage || true
+          npx c8 --include=src npm run test:quiet || true
 
           REPORT=$(npx c8 check-coverage --lines 101 --functions 101 --branches 101 --statements 101 2>&1 > /dev/null || true)
 
