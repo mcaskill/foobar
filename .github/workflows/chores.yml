@@ -81,6 +81,7 @@ jobs:
 
           BRANCH=${GITHUB_REF#refs/heads/}
 
+          echo ""
           echo "Covered Branch: $BRANCH"
           echo "Total Coverage: $COVERAGE%"
 
