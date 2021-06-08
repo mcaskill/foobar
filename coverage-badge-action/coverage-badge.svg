@@ -1,14 +1,1 @@
-<svg width="96.3" height="20" viewBox="0 0 963 200" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="coverage: 93%">
-  <title>coverage: 93%</title>
-  <g>
-    <rect fill="#555" width="603" height="200"/>
-    <rect fill="#99CC09" x="603" width="360" height="200"/>
-  </g>
-  <g aria-hidden="true" fill="#fff" text-anchor="start" font-family="Verdana,DejaVu Sans,sans-serif" font-size="110">
-    <text x="60" y="148" textLength="503" fill="#000" opacity="0.1">coverage</text>
-    <text x="50" y="138" textLength="503">coverage</text>
-    <text x="658" y="148" textLength="260" fill="#000" opacity="0.1">93%</text>
-    <text x="648" y="138" textLength="260">93%</text>
-  </g>
-  
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="82" height="20" role="img" aria-label="coverage: %"><title>coverage: %</title><g shape-rendering="crispEdges"><rect width="61" height="20" fill="#555"/><rect x="61" width="21" height="20" fill="#555"/></g><g fill="#fff" text-anchor="middle" font-family="Verdana,Geneva,DejaVu Sans,sans-serif" text-rendering="geometricPrecision" font-size="110"><text x="315" y="140" transform="scale(.1)" fill="#fff" textLength="510">coverage</text><text x="705" y="140" transform="scale(.1)" fill="#fff" textLength="110">%</text></g></svg>
