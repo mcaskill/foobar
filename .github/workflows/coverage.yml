@@ -156,13 +156,14 @@ jobs:
 
           if [[ -z "$(GIT_OPTIONAL_LOCKS=0 git status --porcelain --ignore-submodules -unormal)" ]]; then
             echo "Nothing to commit"
-            exit 0
+            exit 1
           fi
 
           echo "::set-output name=updated::1"
 
       - name: Commit badge
         id: commit
+        if: ${{ steps.badge.outputs.updated }}
         env:
           COVERAGE_TOTAL: ${{ needs.coverage.outputs.total }}%
           BADGE_PATH: ${{ steps.parameters.outputs.path }}
