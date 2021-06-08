@@ -106,14 +106,16 @@ jobs:
     defaults:
       run:
         shell: bash
+    env:
+        STORAGE_PATH: storage/branches/${{ needs.coverage.outputs.branch }}
     steps:
       - name: Check out storage branch
         uses: actions/checkout@v2
         with:
-          ref: gh-storage
+          ref: gh-pages
 
       - name: Prepare storage directory
-        run: mkdir -p ${{ needs.coverage.outputs.branch }}
+        run: mkdir -p $STORAGE_PATH
 
       - name: Prepare badge
         id: parameters
@@ -140,7 +142,7 @@ jobs:
           fi
 
           echo "::set-output name=color::$COLOR"
-          echo "::set-output name=path::${{ needs.coverage.outputs.branch }}/coverage-badge.svg"
+          echo "::set-output name=path::$STORAGE_PATH/coverage-badge.svg"
 
       - name: Update badge
         id: badge
