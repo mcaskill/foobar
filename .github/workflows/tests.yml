@@ -54,7 +54,7 @@ jobs:
           path: ~/.npm
           key: ${{ matrix.os }}-node-${{ matrix.node }}-${{ hashFiles('**/package-lock.json') }}
           restore-keys: |
-            ${{ matrix.os }}-node-${{ matrix.node }}
+            ${{ matrix.os }}-node-${{ matrix.node }}-
             ${{ matrix.os }}-node-
 
       - run: npm ci

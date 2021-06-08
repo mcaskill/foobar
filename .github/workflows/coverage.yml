@@ -41,10 +41,10 @@ jobs:
         id: cache
         with:
           path: ~/.npm
-          key: ${{ runner.os }}-node-16-${{ hashFiles('**/package-lock.json') }}
+          key: ubuntu-latest-node-16-${{ hashFiles('**/package-lock.json') }}
           restore-keys: |
-            ${{ runner.os }}-node-16
-            ${{ runner.os }}-node-
+            ubuntu-latest-node-16-
+            ubuntu-latest-node-
 
       - run: npm ci
 
@@ -94,7 +94,7 @@ jobs:
       # Assign default values to ensure `needs` context
       # is defined in dependdent job.
       branch: ${{ steps.report.outputs.branch || null }}
-      coverage: ${{ steps.report.outputs.coverage || 'NaN' }}
+      total: ${{ steps.report.outputs.coverage || 'NaN' }}
 
   badge:
     name: Update coverage badge
