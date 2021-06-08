@@ -149,10 +149,10 @@ jobs:
           BADGE_PATH: ${{ steps.parameters.outputs.path }}
         # Badge URI:
         #
-        # - https://img.shields.io/badge/coverage-${BADGE_MESSAGE}%25-${BADGE_COLOR}?style=flat-square
-        # - https://flat.badgen.net/badge/coverage/${BADGE_MESSAGE}%25/${BADGE_COLOR}
+        # - https://img.shields.io/badge/coverage-${BADGE_STATUS}%25-${BADGE_COLOR}?style=flat-square
+        # - https://flat.badgen.net/badge/coverage/${BADGE_STATUS}%25/${BADGE_COLOR}
         run: |
-          curl -fsS "https://flat.badgen.net/badge/coverage/${BADGE_STATUS}%25/${BADGE_COLOR}" -o ${BADGE_PATH}
+          curl -fsS "https://img.shields.io/badge/coverage-${BADGE_STATUS}%25-${BADGE_COLOR}?style=flat-square" -o ${BADGE_PATH}
 
           if [[ -z "$(GIT_OPTIONAL_LOCKS=0 git status --porcelain --ignore-submodules -unormal)" ]]; then
             echo "Nothing to commit"
