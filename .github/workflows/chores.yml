@@ -157,7 +157,7 @@ jobs:
 
           if [[ -z "$(GIT_OPTIONAL_LOCKS=0 git status --porcelain --ignore-submodules -unormal)" ]]; then
             echo "Nothing to commit"
-            exit 1
+            exit 0
           fi
 
           echo "::set-output name=updated::1"
