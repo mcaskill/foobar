@@ -1,4 +1,4 @@
-name: CI
+name: Coverage
 
 on:
   # Triggers the workflow on push or pull request events but only for the
@@ -25,53 +25,46 @@ on:
   workflow_dispatch:
 
 jobs:
-  test:
-    name: Node.js v${{ matrix.nodejs }} (${{ matrix.os }})
-    runs-on: ${{ matrix.os }}
-    timeout-minutes: 3
-    strategy:
-      matrix:
-        nodejs:
-          # - 12
-          - 14
-          - 16
-        os:
-          - ubuntu-latest
-          # - windows-latest
-          # - macOS-latest
+  coverage:
+    runs-on: ubuntu-latest
     defaults:
       run:
         shell: bash
     steps:
-      - name: Check out repository
-        uses: actions/checkout@v2
-
-      - name: Set up Node
-        uses: actions/setup-node@v1
+      - uses: actions/checkout@v2
+      - uses: actions/setup-node@v2
         with:
-          node-version: ${{ matrix.nodejs }}
+          node-version: 16
 
-      - name: Install dependencies
-        run: npm install --no-fund
+      - uses: actions/cache@v2
+        id: cache
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-node-16-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-16
+            ${{ runner.os }}-node-
 
-      - name: Test with coverage
-        continue-on-error: true
-        run: npm run test:coverage
+      - run: npm ci
+        if: ${{ steps.cache.outputs.cache-hit != 'true' }}
+      - run: npm run build
 
       - name: Report coverage
         id: report
-        if: ${{ matrix.nodejs >= 16 && matrix.os == 'ubuntu-latest' }}
-        continue-on-error: true
         # Coverage Notes:
         #
         # 1. Using `c8 check-coverage` for a more succinct output, to extract the
         #    total of each metric, compared to reporters like "json-summary".
         # 2. Using a coverage threshold of "101" to ensure `c8` returns all four
-        #    metrics to calculate the total average.
+        #    metrics to calculate the average total percentage.
         # 3. In case `c8` does not return all four metrics, the script will
         #    assume they are missing because they exceed the threshold somehow,
         #    and have `awk` compensate by adding in the missing counts as 100%.
+        # 4. If by some freak occurrence, the total percentage is above 100%,
+        #    clamp it down to 100%.
         run: |
+          npm run test:coverage || true
+
           REPORT=$(npx c8 check-coverage --lines 101 --functions 101 --branches 101 --statements 101 2>&1 > /dev/null || true)
 
           COVERAGE=$( \
@@ -97,7 +90,7 @@ jobs:
           fi
 
           echo "::set-output name=branch::$BRANCH"
-          echo "::set-output name=coverage::$COVERAGE"
+          echo "::set-output name=total::$COVERAGE"
     outputs:
       # Assign default values to ensure `needs` context
       # is defined in dependdent job.
@@ -109,7 +102,7 @@ jobs:
     runs-on: ubuntu-latest
     continue-on-error: true
     needs: test
-    if: ${{ success() && needs.test.outputs.branch && needs.test.outputs.coverage >= 0 && (github.event_name == 'workflow_dispatch' || github.event_name == 'push') }}
+    if: ${{ needs.coverage.outputs.branch && needs.coverage.outputs.total >= 0 && (github.event_name == 'workflow_dispatch' || github.event_name == 'push') }}
     defaults:
       run:
         shell: bash
@@ -120,19 +113,18 @@ jobs:
           ref: gh-storage
 
       - name: Prepare storage directory
-        if: ${{ success() && needs.test.outputs.branch }}
-        run: mkdir -p ${{ needs.test.outputs.branch }}
+        run: mkdir -p ${{ needs.coverage.outputs.branch }}
 
       - name: Prepare badge
         id: parameters
         # Badge Colors:
         #
         # | Service    | Unknown   | 100%        | > 75%  | > 50%  | > 25%  | >= 0 |
-        # | ---------- |
+        # | ---------- | --------- | ----------- | ------ | ------ | ------ | ---- |
         # | shields.io | lightgrey | brightgreen | green  | yellow | orange | red  |
         # | badgen.net | grey      | green       | 99CC09 | yellow | orange | red  |
         run: |
-          TOTAL=${{ needs.test.outputs.coverage }}
+          TOTAL=${{ needs.coverage.outputs.total }}
           COLOR=grey
 
           if (( $TOTAL == 100 )); then
@@ -148,13 +140,12 @@ jobs:
           fi
 
           echo "::set-output name=color::$COLOR"
-          echo "::set-output name=path::${{ needs.test.outputs.branch }}/coverage-badge.svg"
+          echo "::set-output name=path::${{ needs.coverage.outputs.branch }}/coverage-badge.svg"
 
       - name: Update badge
         id: badge
-        if: ${{ success() && steps.parameters.outputs.path }}
         env:
-          BADGE_STATUS: ${{ needs.test.outputs.coverage }}
+          BADGE_STATUS: ${{ needs.coverage.outputs.total }}
           BADGE_COLOR: ${{ steps.parameters.outputs.color }}
           BADGE_PATH: ${{ steps.parameters.outputs.path }}
         # Badge URI:
@@ -173,13 +164,12 @@ jobs:
 
       - name: Commit badge
         id: commit
-        if: ${{ success() && steps.badge.outputs.updated && steps.parameters.outputs.path }}
         env:
-          COVERAGE_PCT: ${{ needs.test.outputs.coverage }}%
+          COVERAGE_TOTAL: ${{ needs.coverage.outputs.total }}%
           BADGE_PATH: ${{ steps.parameters.outputs.path }}
         run: |
           git config user.name github-actions
           git config user.email github-actions@github.com
           git add $BADGE_PATH
-          git commit -m "Update coverage badge to $COVERAGE_PCT"
+          git commit -m "Update coverage badge to $COVERAGE_TOTAL"
           git push
