@@ -101,7 +101,7 @@ jobs:
     name: Update coverage badge
     runs-on: ubuntu-latest
     continue-on-error: true
-    needs: test
+    needs: coverage
     if: ${{ needs.coverage.outputs.branch && needs.coverage.outputs.total >= 0 && (github.event_name == 'workflow_dispatch' || github.event_name == 'push') }}
     defaults:
       run:
