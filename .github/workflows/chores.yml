@@ -1,4 +1,4 @@
-name: Coverage
+name: Chores
 
 on:
   # Triggers the workflow on push or pull request events but only for the
@@ -49,8 +49,7 @@ jobs:
             ubuntu-latest-node-
 
       - run: npm ci
-
-      - name: Report coverage
+      - name: Check coverage
         id: report
         # Coverage Notes:
         #
@@ -64,7 +63,7 @@ jobs:
         # 4. If by some freak occurrence, the total percentage is above 100%,
         #    clamp it down to 100%.
         run: |
-          npx c8 --include=src npm run test:quiet || true
+          npx c8 --include=src npm run test:quiet 2>&1 > /dev/null || true
 
           REPORT=$(npx c8 check-coverage --lines 101 --functions 101 --branches 101 --statements 101 2>&1 > /dev/null || true)
 
