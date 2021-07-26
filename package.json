@@ -3,7 +3,6 @@
   "type": "module",
   "scripts": {
     "test": "uvu tests",
-    "test:quiet": "uvu tests 2>&1 > /dev/null",
     "test:coverage": "c8 --include=src npm test"
   },
   "devDependencies": {

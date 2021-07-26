@@ -1,0 +1,83 @@
+name: Update coverage badge
+description: Generates a SVG badge with the provided coverage.
+#
+# Prerequisites:
+#
+# - Branch where to store coverage badge image must be checked-out
+#   into `inputs.path`.
+#
+# Badge Colors:
+#
+# | Service    | Unknown   | 100%        | > 75%  | > 50%  | > 25%  | >= 0 |
+# | ---------- | --------- | ----------- | ------ | ------ | ------ | ---- |
+# | shields.io | lightgrey | brightgreen | green  | yellow | orange | red  |
+# | badgen.net | grey      | green       | 99CC09 | yellow | orange | red  |
+#
+# Badge URI:
+#
+# - https://img.shields.io/badge/coverage-${BADGE_STATUS}%25-${BADGE_COLOR}
+# - https://badgen.net/badge/coverage/${BADGE_STATUS}%25/${BADGE_COLOR}
+#
+inputs:
+  working-directory:
+    description: The working directory of where to run the command.
+    default: ''
+  label:
+    description: The subject of the badge.
+    default: coverage
+  coverage:
+    description: The status of the badge.
+    required: true
+  path:
+    description: Relative path under $GITHUB_WORKSPACE to store the badge image file.
+    required: true
+runs:
+  using: composite
+  steps:
+    - name: Prepare storage directory
+      env:
+        BADGE_PATH: ${{ inputs.path }}
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      run: |
+        mkdir -p "${BADGE_PATH%/*}"
+    - name: Update badge image
+      id: image
+      env:
+        BADGE_LABEL: ${{ inputs.label }}
+        BADGE_STATUS: ${{ inputs.coverage }}
+        BADGE_COLOR: ${{
+          inputs.coverage == 100 && 'brightgreen' ||
+          inputs.coverage > 75   && 'green'       ||
+          inputs.coverage > 50   && 'yellow'      ||
+          inputs.coverage > 25   && 'orange'      ||
+          inputs.coverage >= 0   && 'red'         ||
+          'lightgrey' }}
+        BADGE_PATH: ${{ inputs.path }}
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      run: |
+        BADGE_URL="https://img.shields.io/badge/${BADGE_LABEL}-${BADGE_STATUS}%25-${BADGE_COLOR}"
+
+        curl $BADGE_URL \
+          -o $BADGE_PATH \
+          -H "User-Agent: github-actions" \
+          -fsS
+    - name: Commit badge if changed
+      env:
+        COVERAGE: ${{ inputs.coverage }}%
+        BADGE_PATH: ${{ inputs.path }}
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      run: |
+        if [[ -z $(git status --porcelain --ignore-submodules) ]]; then
+          echo "Nothing to commit"
+          exit 0
+        fi
+
+        git config user.name "github-actions[bot]"
+        git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+        git add $BADGE_PATH
+        git commit -m "Update coverage badge to $COVERAGE"
+        git push

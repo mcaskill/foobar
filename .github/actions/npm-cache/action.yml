@@ -1,0 +1,30 @@
+name: NPM Cache
+description: Cache NPM dependencies; ensure actions/setup-node is run first.
+#
+# Note: This action does NOT work. Composite actions
+# do not support the use of other actions.
+#
+inputs:
+  node-version:
+    description: Version of Node used.
+    required: true
+outputs:
+  cache-hit:
+    description: A boolean value to indicate an exact match was found for the primary key.
+    value: ${{ steps.cache.outputs.cache-hit }}
+runs:
+  using: composite
+  steps:
+    - id: npm
+      name: Get npm cache directory
+      run: |
+        echo "::set-output name=dir::$(npm config get cache)"
+      shell: bash
+    - id: cache
+      uses: actions/cache@v2
+      with:
+        path: ${{ steps.npm.outputs.dir }}
+        key: ${{ runner.os }}-node-${{ inputs.node-version }}-${{ hashFiles('**/package-lock.json') }}
+        restore-keys: |
+          ${{ runner.os }}-node-${{ inputs.node-version }}-
+          ${{ runner.os }}-node-

@@ -1,0 +1,65 @@
+name: Update coverage status
+description: Creates a status for the provided commit.
+#
+# Prerequisites:
+#
+# - None
+#
+inputs:
+  # path:
+  #   description: Relative path under $GITHUB_WORKSPACE to store the badge image file.
+  #   required: true
+  coverage:
+    description: The status of the badge.
+    required: true
+  change:
+    description: The change in coverage from the last result.
+    default: NaN
+  threshold:
+    description: The coverage threshold.
+    default: NaN
+runs:
+  using: composite
+  steps:
+    - name: Prepare storage directory
+      env:
+        COVERAGE: ${{ inputs.coverage }}
+        CHANGE: ${{ inputs.change }}
+        THRESHOLD: ${{ inputs.threshold }}
+      #
+      # {
+      #   "state": "pending",
+      #   "context": "coverage/total",
+      #   "description": "In progress — This check has started…",
+      #   "target_url": "https://github.com/${{ github.repository }}/pull/${{ github.event.pull_request.number }}/checks?check_run_id=${{ github.run_id }}"
+      # }
+      #
+      run: |
+        if (( $CHANGE >= 0 )); then
+          DESCRIPTION="$COVERAGE% (+$(printf "%0.2f" $CHANGE)%)"
+        elif (( $CHANGE < 0 )); then
+          DESCRIPTION="$COVERAGE% ($(printf "%0.2f" $CHANGE)%)"
+        else
+          DESCRIPTION="$COVERAGE%"
+        fi
+
+        if (( $THRESHOLD == NaN || $COVERAGE >= $THRESHOLD )); then
+          STATE=success
+        else
+          STATE=failure
+        fi
+
+        TARGET_URL=https://github.com/${{ github.repository }}/pull/${{ github.event.pull_request.number }}/checks?check_run_id=${{ github.run_id }}
+
+        curl https://api.github.com/repos/${{ github.repository }}/statuses/${{ github.sha }} \
+          -X POST \
+          -H 'Accept: application/vnd.github.v3+json' \
+          -H 'Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}' \
+          -H 'Content-Type: application/json' \
+          -d '{
+              "state": "$STATE",
+              "context": "coverage/total",
+              "description": "$DESCRIPTION",
+              "target_url": "$TARGET_URL"
+            }'
+      shell: bash

@@ -1,0 +1,68 @@
+name: Fetch coverage report
+description: Outputs the test coverage results; ensure Node project is installed first.
+#
+# Prerequisites:
+#
+# - Repository must be checked-out.
+# - Node must be set-up.
+# - NPM dependencies must be installed.
+# - NPM package must have a "test" script.
+#
+# Notes:
+#
+# 1. Uses `c8` to generate coverage of `npm test`. Any output, error, and
+#    exit code is suppressed from c8, npm, and the test runner to ignore
+#    the fail-fast behaviour of GitHub-hosted runners.
+# 2. Uses `c8 report` to generate a "text-summary" report to extract the
+#    percentage of each metric.
+# 3. The mean coverage is the `(sum of metrics) / number of metrics`.
+# 4. If by some freak occurrence, the coverage is below 0% or above 100%,
+#    it is clamped to 0% or to 100%.
+#
+outputs:
+  total:
+    description: The test coverage result.
+    value: ${{ steps.report.outputs.total || 'NaN' }}
+  change:
+    description: The change in coverage from the last result.
+    value: ${{ steps.report.outputs.change || 'NaN' }}
+  threshold:
+    description: The coverage threshold.
+    value: ${{ steps.report.outputs.threshold || 'NaN' }}
+runs:
+  using: composite
+  steps:
+    - id: report
+      name: Calculate coverage
+      run: |
+        npx c8 --include=src npm test 2>&1 > /dev/null || true
+
+        SUMMARY=$(npx c8 report --reporter=text-summary)
+        METRICS=$(echo $SUMMARY | grep '(\d*\.?\d+)(?=%)' -Po)
+
+        COVERAGE=$( \
+          echo $METRICS | \
+          awk '{ SUM += $1 } END { print int(SUM / NR) }' \
+        )
+
+        echo "Coverage: $COVERAGE%"
+
+        THRESHOLD=NaN
+        FILES=".c8rc .c8rc.json .nycrc .nycrc.json"
+        for FILE in $FILES; do
+          if [ -f "$FILE" ]; then
+            THRESHOLD=$( \
+              grep '["|'\'']?(?:lines|functions|branches|statements)["|'\'']?:\s*(\d*\.?\d+)' -Po $FILE | \
+              grep '\d*\.?\d+' -Po | \
+              awk '{ SUM += $1 } END { print int(SUM / NR) }' \
+            )
+            break
+          fi
+        done
+
+        echo "Threshold: $THRESHOLD%"
+
+        echo "::set-output name=total::$COVERAGE"
+        echo "::set-output name=change::NaN"
+        echo "::set-output name=threshold::$THRESHOLD"
+      shell: bash
